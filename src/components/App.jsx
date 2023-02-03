@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -19,99 +19,87 @@ const Status = {
   REJECTED: 'rejected',
 };
 
-class App extends React.Component {
-  state = {
-    searchText: '',
-    page: 1,
-    images: [],
-    error: null,
-    status: Status.IDLE,
-    totalHits: null,
-    isLoading: false,
-  };
+export default function App() {
+  const [searchText, setSearchText] = useState('');
+  const [page, setPage] = useState(1);
+  const [images, setImages] = useState([]);
+  const [status, setStatus] = useState(Status.IDLE);
+  const [totalHits, setTotalHits] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [tags, setTags] = useState('');
+  const [largeImageURL, setLargeImageURL] = useState('');
 
-  handleFormSubmit = searchText => {
-    this.setState({
-      searchText,
-      page: 1,
-      images: [],
-      status: Status.IDLE,
-      totalHits: null,
-    });
-  };
-
-  loadMore = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
-  };
-
-  componentDidUpdate(prevProps, prevState) {
-    const prevName = prevState.searchText;
-    const nextName = this.state.searchText;
-    const prevPage = prevState.page;
-    const nextPage = this.state.page;
-
-    if (prevName !== nextName || prevPage !== nextPage) {
-      this.markupGallery();
+  const handleFormSubmit = newSearchText => {
+    if (searchText === newSearchText) {
+      return toast.warn('We have already found this result');
     }
-  }
-
-  markupGallery = async () => {
-    const { searchText, page } = this.state;
-    this.setState({ isLoading: false, status: Status.PENDING });
-    try {
-      const { hits, totalHits } = await Api(searchText, page);
-
-      if (totalHits === 0) {
-        this.setState({ status: Status.IDLE });
-        return toast.warn('No images on your query!');
-      }
-
-      const newImages = this.result(hits);
-
-      if (page >= 2) {
-        return this.setState(({ images }) => ({
-          images: [...images, ...newImages],
-          totalHits,
-        }));
-      }
-
-      this.setState({
-        status: Status.RESOLVED,
-        images: newImages,
-        totalHits: totalHits,
-      });
-    } catch (error) {
-      this.setState({ error, status: Status.REJECTED });
-      toast.error('This is an error!');
-    } finally {
-      this.setState({ isLoading: false, status: Status.IDLE });
-    }
+    setSearchText(newSearchText);
+    setPage(1);
+    setImages([]);
+    setStatus(Status.IDLE);
+    setTotalHits(null);
   };
 
-  isShowButtonLoadMore = () => {
-    const ShowBtn = this.state.totalHits - this.state.page * 12;
+  const loadMore = () => {
+    setPage(pages => pages + 1);
+  };
+
+  useEffect(() => {
+    if (!searchText) {
+      return;
+    }
+    const markupGallery = async () => {
+      setStatus(Status.PENDING);
+      setIsLoading(false);
+
+      try {
+        const { hits, totalHits } = await Api(searchText, page);
+
+        if (totalHits === 0) {
+          setStatus(Status.IDLE);
+          return toast.warn('No images on your query!');
+        }
+
+        const newImages = result(hits);
+
+        if (page >= 2) {
+          return setImages(images => [...images, ...newImages], totalHits);
+        }
+        setImages(newImages);
+        setStatus(Status.RESOLVED);
+        setTotalHits(totalHits);
+      } catch (error) {
+        setStatus(Status.REJECTED);
+        toast.error('This is an error!');
+      } finally {
+        setIsLoading(false);
+        setStatus(Status.IDLE);
+      }
+    };
+    markupGallery();
+  }, [page, searchText]);
+
+  const isShowButtonLoadMore = () => {
+    const ShowBtn = totalHits - page * 12;
     /* console.log(ShowBtn);*/
     if (ShowBtn > 0) {
-      return !this.state.isLoading;
+      return !isLoading;
     }
     return false;
   };
 
-  toggleModal = () => {
-    this.setState(({ showModal }) => ({
-      showModal: !showModal,
-    }));
+  const toggleModal = () => {
+    setShowModal(!showModal);
   };
 
-  openModal = (largeImageURL, tags) => {
-    this.toggleModal();
-    this.setState({
-      largeImageURL,
-      tags,
-    });
+  const openModal = (largeImageURL, tags) => {
+    toggleModal();
+    setTags(tags);
+    setLargeImageURL(largeImageURL);
   };
 
-  result = data => {
+  const result = data => {
     return data.map(({ id, tags, largeImageURL, webformatURL }) => ({
       id,
       tags,
@@ -120,38 +108,23 @@ class App extends React.Component {
     }));
   };
 
-  render() {
-    const { images, status, largeImageURL, tags, showModal, isLoading } =
-      this.state;
-    return (
-      <div className={css.app}>
-        {isLoading && <Loader />}
-        <Searchbar onSubmit={this.handleFormSubmit} />
-        {images.length > 0 && (
-          <ImageGallery
-            images={images}
-            openModal={this.openModal}
-          ></ImageGallery>
-        )}
-        {status === 'pending' && <Loader />}
-        {this.isShowButtonLoadMore() && (
-          <Button onLoadMore={this.loadMore}></Button>
-        )}
-        {showModal && (
-          <Modal
-            onModalClick={this.toggleModal}
-            largeImageURL={largeImageURL}
-            tags={tags}
-          />
-        )}
-        <ToastContainer
-          position="top-center"
-          autoClose={2500}
-          theme="colored"
+  return (
+    <div className={css.app}>
+      {isLoading && <Loader />}
+      <Searchbar onSubmit={handleFormSubmit} />
+      {images.length > 0 && (
+        <ImageGallery images={images} openModal={openModal}></ImageGallery>
+      )}
+      {status === 'pending' && <Loader />}
+      {isShowButtonLoadMore() && <Button onLoadMore={loadMore}></Button>}
+      {showModal && (
+        <Modal
+          onModalClick={toggleModal}
+          largeImageURL={largeImageURL}
+          tags={tags}
         />
-      </div>
-    );
-  }
+      )}
+      <ToastContainer position="top-center" autoClose={2500} theme="colored" />
+    </div>
+  );
 }
-
-export default App;

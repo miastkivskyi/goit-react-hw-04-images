@@ -1,48 +1,45 @@
-import React from 'react';
+/* eslint-disable no-undef */
+import { useState } from 'react';
 import css from './Searchbar.module.css';
 import { ImSearch } from 'react-icons/im';
 
-class Searchbar extends React.Component {
-  state = {
-    searchText: '',
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+export default function Searchbar({ onSubmit }) {
+  const [searchText, setSearchText] = useState('');
+
+  const handleNameChange = event => {
+    setSearchText(event.currentTarget.value.toLowerCase());
   };
 
-  handleNameChange = event => {
-    this.setState({ searchText: event.currentTarget.value.toLowerCase() });
-  };
-
-  handleSubmit = event => {
+  const handleSubmit = event => {
     event.preventDefault();
 
-    if (this.state.searchText.trim() === '') {
-      console.log('Введіть щось в поле пошуку');
-      return;
+    if (searchText.trim() === '') {
+      return toast.warn('Type something in the search box');
     }
-
-    this.props.onSubmit(this.state.searchText);
-    this.setState({ searchText: '' });
+    onSubmit(searchText);
   };
-  render() {
-    return (
-      <header className={css.searchbar}>
-        <form className={css.searchForm} onSubmit={this.handleSubmit}>
-          <button type="submit" className={css.searchFormButton}>
-            <ImSearch className={css.searchImg} />
-          </button>
 
-          <input
-            className={css.searchFormInput}
-            type="text"
-            autoComplete="off"
-            autoFocus
-            placeholder="Search images and photos"
-            value={this.state.searchText}
-            onChange={this.handleNameChange}
-          />
-        </form>
-      </header>
-    );
-  }
+  return (
+    <header className={css.searchbar}>
+      <form className={css.searchForm} onSubmit={handleSubmit}>
+        <button type="submit" className={css.searchFormButton}>
+          <ImSearch className={css.searchImg} />
+        </button>
+
+        <input
+          className={css.searchFormInput}
+          type="text"
+          autoComplete="off"
+          autoFocus
+          placeholder="Search images and photos"
+          value={searchText}
+          onChange={handleNameChange}
+        />
+      </form>
+      <ToastContainer position="top-center" autoClose={2500} theme="colored" />
+    </header>
+  );
 }
-
-export default Searchbar;
