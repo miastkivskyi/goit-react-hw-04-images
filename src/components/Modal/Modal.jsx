@@ -7,18 +7,17 @@ const modal = document.querySelector('#modal-root');
 
 export default function Modal({ onModalClick, largeImageURL, tags }) {
   useEffect(() => {
+    const onEscClick = e => {
+      if (e.code === 'Escape') {
+        onModalClick();
+      }
+    };
     window.addEventListener('keydown', onEscClick);
 
     return () => {
       window.removeEventListener('keydown', onEscClick);
     };
-  });
-
-  const onEscClick = e => {
-    if (e.code === 'Escape') {
-      onModalClick();
-    }
-  };
+  }, [onModalClick]);
 
   const onOverleyClick = e => {
     if (e.target === e.currentTarget) {
